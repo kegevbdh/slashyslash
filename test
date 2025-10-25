@@ -1,4 +1,4 @@
--- Ultimate Optimized Killaura GUI Script (with Auto-Collect dev toggle)
+-- 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -283,47 +283,150 @@ teleportCorner:Clone().Parent = world3Button
 teleportCorner:Clone().Parent = world4Button
 
 -- ===========================
--- Auto-Collect Section (ADDED)
+-- Auto-Collect Implementation (DEV) — Robust/Functional Version
 -- ===========================
-local collectSection = createSection(345, 50) -- place before godmode
-local collectLabel = Instance.new("TextLabel")
-collectLabel.Size = UDim2.new(0.6, 0, 1, 0)
-collectLabel.Position = UDim2.new(0, 0, 0, 0)
-collectLabel.BackgroundTransparency = 1
-collectLabel.Text = "Auto Collect (DEV)"
-collectLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-collectLabel.TextSize = 14
-collectLabel.Font = Enum.Font.Gotham
-collectLabel.TextXAlignment = Enum.TextXAlignment.Left
-collectLabel.Parent = collectSection
+local collectScanInterval = 0.15   -- seconds between scans
+local collectRange = 12            -- max distance in studs to attempt a pickup
+local collectBatch = 6             -- how many prompted items to process per scan
 
-local collectButton = Instance.new("TextButton")
-collectButton.Size = UDim2.new(0.35, 0, 0.7, 0)
-collectButton.Position = UDim2.new(0.65, 0, 0.15, 0)
-collectButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-collectButton.Text = "OFF"
-collectButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-collectButton.TextSize = 12
-collectButton.BorderSizePixel = 0
-collectButton.Parent = collectSection
+-- Helper: find ProximityPrompt instances with ActionText "Pickup"
+local function getPromptedItems()
+    local results = {}
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return results end
+    local hrpPos = hrp.Position
 
-local collectButtonCorner = Instance.new("UICorner")
-collectButtonCorner.CornerRadius = UDim.new(0, 8)
-collectButtonCorner.Parent = collectButton
+    for _, prompt in ipairs(workspace:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") and prompt.Enabled and (prompt.ActionText == "Pickup" or prompt.ActionText:lower():find("pick")) then
+            -- determine position
+            local parent = prompt.Parent
+            local pos
+            if parent:IsA("BasePart") then
+                pos = parent.Position
+            elseif parent:IsA("Model") and parent.PrimaryPart then
+                pos = parent.PrimaryPart.Position
+            end
 
--- Add hover effect
-local function smallHover(b)
-    b.MouseEnter:Connect(function()
-        pcall(function() TweenService:Create(b, TweenInfo.new(0.15), {BackgroundTransparency = 0.2}):Play() end)
+            if pos and (pos - hrpPos).Magnitude <= math.min(prompt.MaxActivationDistance, collectRange) then
+                table.insert(results, {prompt = prompt, parent = parent, pos = pos, dist = (pos - hrpPos).Magnitude})
+            end
+        end
+    end
+
+    table.sort(results, function(a,b) return a.dist < b.dist end)
+    return results
+end
+
+-- Robust trigger function: tries multiple safe activation methods
+local function triggerPrompt(entry)
+    if not entry or not entry.prompt then return false end
+    local prompt = entry.prompt
+
+    -- 1) Preferred: fireproximityprompt (works in Studio / many runtimes)
+    local ok, err = pcall(function()
+        if typeof(fireproximityprompt) == "function" then
+            fireproximityprompt(prompt)
+            return true
+        end
     end)
-    b.MouseLeave:Connect(function()
-        pcall(function() TweenService:Create(b, TweenInfo.new(0.15), {BackgroundTransparency = 0}):Play() end)
+    if ok and typeof(fireproximityprompt) == "function" then
+        return true
+    end
+
+    -- 2) Try :InputHoldBegin / :InputHoldEnd (some prompts expose these)
+    ok, err = pcall(function()
+        if prompt.InputHoldBegin and prompt.InputHoldEnd then
+            prompt:InputHoldBegin()
+            task.wait(0.03)
+            prompt:InputHoldEnd()
+            return true
+        end
+    end)
+    if ok and prompt.InputHoldBegin and prompt.InputHoldEnd then
+        return true
+    end
+
+    -- 3) Try :Trigger (older or alternate APIs)
+    ok, err = pcall(function()
+        if prompt.Trigger then
+            -- some devs expose Trigger as a function on the instance
+            prompt:Trigger()
+            return true
+        end
+    end)
+    if ok and prompt.Trigger then
+        return true
+    end
+
+    -- 4) Fallback: physically move the player briefly to touch the object (dev-only)
+    local parent = entry.parent
+    if parent then
+        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            pcall(function()
+                local orig = hrp.CFrame
+                local targetPos
+                if parent:IsA("BasePart") then
+                    targetPos = parent.Position
+                elseif parent:IsA("Model") and parent.PrimaryPart then
+                    targetPos = parent.PrimaryPart.Position
+                end
+                if targetPos then
+                    hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
+                    task.wait(0.05)
+                    hrp.CFrame = orig
+                end
+            end)
+            return true
+        end
+    end
+
+    return false
+end
+
+-- Runner
+local function startCollectRunner()
+    return RunService.Heartbeat:Connect(function(dt)
+        if not autoCollectEnabled then return end
+
+        -- Throttle to interval to avoid running heavy logic every Heartbeat
+        -- we will accumulate dt
+        startCollectRunner._acc = (startCollectRunner._acc or 0) + dt
+        if startCollectRunner._acc < collectScanInterval then return end
+        startCollectRunner._acc = 0
+
+        local entries = getPromptedItems()
+        if #entries == 0 then return end
+
+        for i = 1, math.min(#entries, collectBatch) do
+            local entry = entries[i]
+            pcall(function() triggerPrompt(entry) end)
+        end
     end)
 end
-smallHover(collectButton)
+
+-- Toggle for collect (GUI already created above; keeps same visuals)
+local function toggleAutoCollect()
+    autoCollectEnabled = not autoCollectEnabled
+    if autoCollectEnabled then
+        collectButton.Text = "ON"
+        collectButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
+        if not collectConnection then collectConnection = startCollectRunner() end
+        print("Auto Collect enabled (dev)")
+    else
+        collectButton.Text = "OFF"
+        collectButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+        if collectConnection then collectConnection:Disconnect() collectConnection = nil end
+        print("Auto Collect disabled (dev)")
+    end
+end
+
+collectButton.MouseButton1Click:Connect(toggleAutoCollect)
+
 -- ===========================
--- End Auto-Collect Section
+-- End Auto-Collect Implementation (DEV)
 -- ===========================
+
 
 -- Godmode Section
 local godmodeSection = createSection(405, 60)
