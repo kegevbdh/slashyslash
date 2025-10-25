@@ -1,4 +1,4 @@
--- 
+-- Dev tools
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -50,8 +50,8 @@ circleShadow.Parent = circleButton
 -- Create main frame (larger for teleport buttons)
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 300, 0, 520) -- increased a bit to fit auto-collect cleanly
-mainFrame.Position = UDim2.new(1, -310, 1, -530) -- Bottom right
+mainFrame.Size = UDim2.new(0, 300, 0, 450) -- Increased height for godmode section
+mainFrame.Position = UDim2.new(1, -310, 1, -460) -- Bottom right
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 mainFrame.BorderSizePixel = 0
 mainFrame.Visible = true -- Start visible as requested
@@ -207,7 +207,7 @@ speedToggleCorner.CornerRadius = UDim.new(0, 8)
 speedToggleCorner.Parent = speedToggle
 
 -- Teleport Section
-local teleportSection = createSection(215, 140) -- more room for world buttons
+local teleportSection = createSection(215, 120) -- Increased height for World 4 button
 local teleportLabel = Instance.new("TextLabel")
 teleportLabel.Size = UDim2.new(1, 0, 0, 20)
 teleportLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -221,7 +221,7 @@ teleportLabel.Parent = teleportSection
 
 -- Teleport buttons container
 local teleportButtons = Instance.new("Frame")
-teleportButtons.Size = UDim2.new(1, 0, 0, 115) -- enough height for two rows
+teleportButtons.Size = UDim2.new(1, 0, 0, 95) -- Increased height for additional row
 teleportButtons.Position = UDim2.new(0, 0, 0, 25)
 teleportButtons.BackgroundTransparency = 1
 teleportButtons.Parent = teleportSection
@@ -282,93 +282,8 @@ teleportCorner:Clone().Parent = world2Button
 teleportCorner:Clone().Parent = world3Button
 teleportCorner:Clone().Parent = world4Button
 
---====================================================
--- 🧩 DEV TOOL: AUTO COLLECT
---====================================================
-do
-	local player = game.Players.LocalPlayer
-	local tsFrame = player:WaitForChild("PlayerGui"):WaitForChild("TS").Main.Dev -- adjust if your dev frame path differs
-
-	--=== UI ===--
-	local collectLabel = Instance.new("TextLabel")
-	collectLabel.Name = "CollectLabel"
-	collectLabel.Parent = tsFrame
-	collectLabel.BackgroundTransparency = 1
-	collectLabel.Size = UDim2.new(0, 150, 0, 30)
-	collectLabel.Position = UDim2.new(0, 10, 0, 210) -- adjust position to fit your layout
-	collectLabel.Font = Enum.Font.SourceSansBold
-	collectLabel.Text = "Auto Collect:"
-	collectLabel.TextSize = 20
-	collectLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	collectLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-	local collectButton = Instance.new("TextButton")
-	collectButton.Name = "CollectButton"
-	collectButton.Parent = tsFrame
-	collectButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-	collectButton.Size = UDim2.new(0, 60, 0, 30)
-	collectButton.Position = UDim2.new(0, 170, 0, 210) -- beside label
-	collectButton.Font = Enum.Font.SourceSansBold
-	collectButton.TextSize = 20
-	collectButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-	collectButton.Text = "OFF"
-	collectButton.AutoButtonColor = true
-	collectButton.BorderSizePixel = 0
-	collectButton.Active = true
-	collectButton.Visible = true
-
-	--=== LOGIC ===--
-	local autoCollectEnabled = false
-	local collectRange = 12
-	local scanInterval = 0.15
-	local runService = game:GetService("RunService")
-
-	collectButton.MouseButton1Click:Connect(function()
-		autoCollectEnabled = not autoCollectEnabled
-		collectButton.Text = autoCollectEnabled and "ON" or "OFF"
-		collectButton.BackgroundColor3 = autoCollectEnabled and Color3.fromRGB(60, 220, 60) or Color3.fromRGB(220, 60, 60)
-	end)
-
-	local function getRoot()
-		local char = player.Character
-		return char and char:FindFirstChild("HumanoidRootPart")
-	end
-
-	runService.Heartbeat:Connect(function()
-		if not autoCollectEnabled then return end
-
-		local root = getRoot()
-		if not root then return end
-
-		for _, prompt in ipairs(workspace:GetDescendants()) do
-			if prompt:IsA("ProximityPrompt") and prompt.Enabled and prompt.ActionText == "Pickup" then
-				local parent = prompt.Parent
-				local pos = parent:IsA("BasePart") and parent.Position
-					or (parent:IsA("Model") and parent.PrimaryPart and parent.PrimaryPart.Position)
-				if pos and (pos - root.Position).Magnitude <= math.min(prompt.MaxActivationDistance, collectRange) then
-					pcall(function()
-						if typeof(fireproximityprompt) == "function" then
-							fireproximityprompt(prompt)
-						else
-							prompt:InputHoldBegin()
-							task.wait(0.03)
-							prompt:InputHoldEnd()
-						end
-					end)
-				end
-			end
-		end
-		task.wait(scanInterval)
-	end)
-end
---====================================================
--- END DEV TOOL
---====================================================
-
-
-
 -- Godmode Section
-local godmodeSection = createSection(405, 60)
+local godmodeSection = createSection(345, 60)
 local godmodeLabel = Instance.new("TextLabel")
 godmodeLabel.Size = UDim2.new(0.6, 0, 0, 20)
 godmodeLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -411,7 +326,6 @@ local killauraEnabled = false
 local rebirthEnabled = false
 local speedhackEnabled = false
 local godmodeEnabled = false
-local autoCollectEnabled = false
 local currentSpeed = 16
 local guiVisible = true -- Start with GUI visible
 
@@ -419,12 +333,12 @@ local killauraConnection = nil
 local rebirthConnection = nil
 local speedhackConnection = nil
 local godmodeConnection = nil
-local collectConnection = nil
 
 -- Remote references
-local M1 = ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote:FindFirstChild("Event")
--- previous code assumed specific remotes; keep original references if available
-local _ok, _ = pcall(function() end) -- placeholder to avoid runtime errors if above structure not present
+local M1 = ReplicatedStorage.Remote.Event.Combat.M1
+local Skibidi1 = ReplicatedStorage.Remote.Event.Rebirth["[C-S]TryRebirth"]
+local Block = ReplicatedStorage.Remote.Event.Combat.Block
+
 -- Teleport locations (UPDATED with World 4)
 local teleportLocations = {
     Spawn = Vector3.new(-85.75, 28.00, -177.19),
@@ -550,8 +464,7 @@ local function optimizedAttack()
         for i = 1, mobCount do
             targetList[i] = mobs[i]
         end
-        -- M1 might be nil if game structure differs; pcall for safety
-        pcall(function() if ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote.Event and ReplicatedStorage.Remote.Event.Combat and ReplicatedStorage.Remote.Event.Combat.M1 then ReplicatedStorage.Remote.Event.Combat.M1:FireServer(targetList) end end)
+        M1:FireServer(targetList)
     end
 end
 
@@ -597,7 +510,7 @@ local function startAutoRebirth()
     return RunService.Heartbeat:Connect(function()
         local currentTime = tick()
         if currentTime - lastRebirthTime >= rebirthCooldown then
-            pcall(function() if ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote.Event and ReplicatedStorage.Remote.Event.Rebirth and ReplicatedStorage.Remote.Event.Rebirth["[C-S]TryRebirth"] then ReplicatedStorage.Remote.Event.Rebirth["[C-S]TryRebirth"]:FireServer() end end)
+            Skibidi1:FireServer()
             lastRebirthTime = currentTime
         end
     end)
@@ -663,11 +576,11 @@ end
 -- Godmode functions
 local function startGodmode()
     -- Fire true once when turning on
-    pcall(function() if ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote.Event and ReplicatedStorage.Remote.Event.Combat and ReplicatedStorage.Remote.Event.Combat.Block then ReplicatedStorage.Remote.Event.Combat.Block:FireServer(true) end end)
+    Block:FireServer(true)
     
     return RunService.Heartbeat:Connect(function()
         -- Continuously fire true to maintain godmode
-        pcall(function() if ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote.Event and ReplicatedStorage.Remote.Event.Combat and ReplicatedStorage.Remote.Event.Combat.Block then ReplicatedStorage.Remote.Event.Combat.Block:FireServer(true) end end)
+        Block:FireServer(true)
     end)
 end
 
@@ -687,7 +600,7 @@ local function toggleGodmode()
             godmodeConnection = nil
         end
         -- Fire false when turning off
-        pcall(function() if ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote.Event and ReplicatedStorage.Remote.Event.Combat and ReplicatedStorage.Remote.Event.Combat.Block then ReplicatedStorage.Remote.Event.Combat.Block:FireServer(false) end end)
+        Block:FireServer(false)
         print("Godmode disabled")
     end
 end
@@ -716,6 +629,7 @@ local function teleportToWorld3()
     teleportToLocation(teleportLocations.World3)
 end
 
+-- NEW: World 4 teleport function
 local function teleportToWorld4()
     teleportToLocation(teleportLocations.World4)
 end
@@ -732,143 +646,7 @@ local function updateSlider(value)
     end
 end
 
--- Add hover effects to all buttons
-local function addHoverEffect(button)
-    button.MouseEnter:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play()
-    end)
-    button.MouseLeave:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
-    end)
-end
-
-addHoverEffect(killauraButton)
-addHoverEffect(rebirthButton)
-addHoverEffect(speedToggle)
-addHoverEffect(godmodeButton)
-addHoverEffect(spawnWorldButton)
-addHoverEffect(world2Button)
-addHoverEffect(world3Button)
-addHoverEffect(world4Button)
-addHoverEffect(collectButton)
-
--- ===========================
--- Auto-Collect Implementation (DEV)
--- ===========================
--- Settings
-local collectScanInterval = 0.15   -- seconds between scans
-local collectRange = 12            -- max distance in studs to attempt a pickup
-local collectBatch = 6             -- how many prompted items to process per scan
-
--- Helper: find ProximityPrompt instances with ActionText "Pickup"
-local function getPromptedItems()
-    local results = {}
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return results end
-    local hrpPos = hrp.Position
-
-    for _, prompt in ipairs(workspace:GetDescendants()) do
-        if prompt:IsA("ProximityPrompt") and prompt.Enabled and prompt.ActionText == "Pickup" then
-            -- determine position
-            local parent = prompt.Parent
-            local pos
-            if parent:IsA("BasePart") then
-                pos = parent.Position
-            elseif parent:IsA("Model") and parent.PrimaryPart then
-                pos = parent.PrimaryPart.Position
-            end
-
-            if pos and (pos - hrpPos).Magnitude <= math.min(prompt.MaxActivationDistance, collectRange) then
-                table.insert(results, {prompt = prompt, parent = parent, pos = pos, dist = (pos - hrpPos).Magnitude})
-            end
-        end
-    end
-
-    table.sort(results, function(a,b) return a.dist < b.dist end)
-    return results
-end
-
--- Attempt to trigger a prompt safely
-local function triggerPrompt(entry)
-    if not entry or not entry.prompt then return end
-    local prompt = entry.prompt
-
-    -- prefer built-in fire (safe in dev/local)
-    pcall(function()
-        -- Use fireproximityprompt if available (works in studio/roblox)
-        if typeof(fireproximityprompt) == "function" then
-            fireproximityprompt(prompt)
-            return
-        end
-
-        -- Fallback: InputHoldBegin/End if available
-        if prompt.InputHoldBegin and prompt.InputHoldEnd then
-            pcall(prompt.InputHoldBegin, prompt)
-            task.wait(0.05)
-            pcall(prompt.InputHoldEnd, prompt)
-            return
-        end
-
-        -- Final fallback: physically touch parent briefly (safe dev-only)
-        local parent = entry.parent
-        if parent then
-            if parent:IsA("BasePart") then
-                local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    local orig = hrp.CFrame
-                    hrp.CFrame = CFrame.new(parent.Position + Vector3.new(0, 2, 0))
-                    task.wait(0.05)
-                    hrp.CFrame = orig
-                end
-            elseif parent:IsA("Model") and parent.PrimaryPart then
-                local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    local orig = hrp.CFrame
-                    hrp.CFrame = CFrame.new(parent.PrimaryPart.Position + Vector3.new(0, 2, 0))
-                    task.wait(0.05)
-                    hrp.CFrame = orig
-                end
-            end
-        end
-    end)
-end
-
--- Runner
-local function startCollectRunner()
-    return RunService.Heartbeat:Connect(function(dt)
-        if not autoCollectEnabled then return end
-        local entries = getPromptedItems()
-        if #entries == 0 then return end
-
-        for i = 1, math.min(#entries, collectBatch) do
-            local entry = entries[i]
-            pcall(function() triggerPrompt(entry) end)
-        end
-    end)
-end
-
--- Toggle for collect
-local function toggleAutoCollect()
-    autoCollectEnabled = not autoCollectEnabled
-    if autoCollectEnabled then
-        collectButton.Text = "ON"
-        collectButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
-        if not collectConnection then collectConnection = startCollectRunner() end
-        print("Auto Collect enabled (dev)")
-    else
-        collectButton.Text = "OFF"
-        collectButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-        if collectConnection then collectConnection:Disconnect() collectConnection = nil end
-        print("Auto Collect disabled (dev)")
-    end
-end
-
-collectButton.MouseButton1Click:Connect(toggleAutoCollect)
--- ===========================
--- End Auto-Collect Implementation
--- ===========================
-
--- Connect all other buttons
+-- Connect all buttons
 killauraButton.MouseButton1Click:Connect(toggleKillaura)
 rebirthButton.MouseButton1Click:Connect(toggleRebirth)
 speedToggle.MouseButton1Click:Connect(toggleSpeedhack)
@@ -876,7 +654,7 @@ godmodeButton.MouseButton1Click:Connect(toggleGodmode)
 spawnWorldButton.MouseButton1Click:Connect(teleportToSpawn)
 world2Button.MouseButton1Click:Connect(teleportToWorld2)
 world3Button.MouseButton1Click:Connect(teleportToWorld3)
-world4Button.MouseButton1Click:Connect(teleportToWorld4)
+world4Button.MouseButton1Click:Connect(teleportToWorld4) -- NEW: Connect World 4 button
 
 -- Slider functionality
 local sliding = false
@@ -903,6 +681,25 @@ UserInputService.InputChanged:Connect(function(input)
         updateSlider(value)
     end
 end)
+
+-- Add hover effects to all buttons
+local function addHoverEffect(button)
+    button.MouseEnter:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play()
+    end)
+    button.MouseLeave:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+    end)
+end
+
+addHoverEffect(killauraButton)
+addHoverEffect(rebirthButton)
+addHoverEffect(speedToggle)
+addHoverEffect(godmodeButton)
+addHoverEffect(spawnWorldButton)
+addHoverEffect(world2Button)
+addHoverEffect(world3Button)
+addHoverEffect(world4Button) -- NEW: Add hover effect to World 4 button
 
 -- Make title bar draggable
 local dragging = false
@@ -948,5 +745,4 @@ print("- Auto Rebirth")
 print("- Speed Hack")
 print("- Godmode (Unequip shield + use with KillAura)")
 print("- World Teleport (Spawn, World 2, World 3, World 4)")
-print("- Auto Collect (dev toggle)")
 print("- Mobile Compatible")
