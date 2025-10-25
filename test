@@ -735,91 +735,72 @@ UserInputService.InputChanged:Connect(function(input)
         update(input)
     end
 end)
--- ===============================
--- 🔹 AUTO COLLECT FEATURE 🔹
--- ===============================
 
--- Create Auto Collect Section
-local collectSection = createSection(415, 40)
-local collectLabel = Instance.new("TextLabel")
-collectLabel.Size = UDim2.new(0.6, 0, 1, 0)
-collectLabel.BackgroundTransparency = 1
-collectLabel.Text = "Auto Collect"
-collectLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-collectLabel.TextSize = 14
-collectLabel.Font = Enum.Font.Gotham
-collectLabel.TextXAlignment = Enum.TextXAlignment.Left
-collectLabel.Parent = collectSection
 
-local collectButton = Instance.new("TextButton")
-collectButton.Size = UDim2.new(0.35, 0, 0.7, 0)
-collectButton.Position = UDim2.new(0.65, 0, 0.15, 0)
-collectButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-collectButton.Text = "OFF"
-collectButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-collectButton.TextSize = 12
-collectButton.BorderSizePixel = 0
-collectButton.Parent = collectSection
 
-local collectCorner = Instance.new("UICorner")
-collectCorner.CornerRadius = UDim.new(0, 8)
-collectCorner.Parent = collectButton
 
 -- Auto Collect variables
 local autoCollectEnabled = false
-local autoCollectConnection = nil
+local autoCollectConnections = {}
+local ProximityPromptService = game:GetService("ProximityPromptService")
 
--- Core auto collect loop
-local function startAutoCollect()
-	return RunService.Heartbeat:Connect(function()
-		local character = player.Character
-		local hrp = character and character:FindFirstChild("HumanoidRootPart")
-		if not hrp then return end
+-- Called whenever a prompt is shown to the player
+local function onPromptShown(prompt, inputType)
+	if not autoCollectEnabled then return end
+	if prompt.ActionText == "Pickup" then
+		task.defer(function()
+			pcall(function()
+				fireproximityprompt(prompt)
+			end)
+		end)
+	end
+end
 
-		for _, descendant in ipairs(workspace:GetDescendants()) do
-			if descendant:IsA("ProximityPrompt") and descendant.ActionText == "Pickup" then
-				local parent = descendant.Parent
-				if parent and parent:IsDescendantOf(workspace) and descendant.Enabled then
-					local targetPos = nil
-					if parent:IsA("BasePart") then
-						targetPos = parent.Position
-					elseif parent:FindFirstChildWhichIsA("BasePart") then
-						targetPos = parent:FindFirstChildWhichIsA("BasePart").Position
-					end
-					if targetPos and (targetPos - hrp.Position).Magnitude <= descendant.MaxActivationDistance then
-						pcall(function()
-							fireproximityprompt(descendant)
-						end)
-					end
-				end
-			end
+-- Called whenever a new prompt is created (appears in workspace)
+local function onPromptAdded(prompt)
+	if not autoCollectEnabled then return end
+	if prompt:IsA("ProximityPrompt") and prompt.ActionText == "Pickup" then
+		task.defer(function()
+			pcall(function()
+				fireproximityprompt(prompt)
+			end)
+		end)
+	end
+end
+
+local function enableAutoCollect()
+	-- connect prompt events
+	autoCollectConnections["shown"] = ProximityPromptService.PromptShown:Connect(onPromptShown)
+	autoCollectConnections["added"] = workspace.DescendantAdded:Connect(function(desc)
+		if desc:IsA("ProximityPrompt") then
+			onPromptAdded(desc)
 		end
 	end)
 end
 
--- Toggle function
+local function disableAutoCollect()
+	for _, c in pairs(autoCollectConnections) do
+		c:Disconnect()
+	end
+	table.clear(autoCollectConnections)
+end
+
 local function toggleAutoCollect()
 	autoCollectEnabled = not autoCollectEnabled
 
 	if autoCollectEnabled then
 		collectButton.Text = "ON"
 		collectButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
-		autoCollectConnection = startAutoCollect()
-		print("Auto Collect enabled")
+		enableAutoCollect()
+		print("Auto Collect enabled (optimized)")
 	else
 		collectButton.Text = "OFF"
 		collectButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-		if autoCollectConnection then
-			autoCollectConnection:Disconnect()
-			autoCollectConnection = nil
-		end
+		disableAutoCollect()
 		print("Auto Collect disabled")
 	end
 end
 
--- Connect button + hover
-collectButton.MouseButton1Click:Connect(toggleAutoCollect)
-addHoverEffect(collectButton)
 
 -- Initialize
 updateSlider(0.2)
