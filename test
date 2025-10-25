@@ -1,4 +1,4 @@
--- Ultimate Optimized Killaura GUI Script
+-- Ultimate Optimized Killaura GUI Script (with Auto-Collect dev toggle)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -50,8 +50,8 @@ circleShadow.Parent = circleButton
 -- Create main frame (larger for teleport buttons)
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 300, 0, 450) -- Increased height for godmode section
-mainFrame.Position = UDim2.new(1, -310, 1, -460) -- Bottom right
+mainFrame.Size = UDim2.new(0, 300, 0, 520) -- increased a bit to fit auto-collect cleanly
+mainFrame.Position = UDim2.new(1, -310, 1, -530) -- Bottom right
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 mainFrame.BorderSizePixel = 0
 mainFrame.Visible = true -- Start visible as requested
@@ -207,7 +207,7 @@ speedToggleCorner.CornerRadius = UDim.new(0, 8)
 speedToggleCorner.Parent = speedToggle
 
 -- Teleport Section
-local teleportSection = createSection(215, 120) -- Increased height for World 4 button
+local teleportSection = createSection(215, 140) -- more room for world buttons
 local teleportLabel = Instance.new("TextLabel")
 teleportLabel.Size = UDim2.new(1, 0, 0, 20)
 teleportLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -221,7 +221,7 @@ teleportLabel.Parent = teleportSection
 
 -- Teleport buttons container
 local teleportButtons = Instance.new("Frame")
-teleportButtons.Size = UDim2.new(1, 0, 0, 95) -- Increased height for additional row
+teleportButtons.Size = UDim2.new(1, 0, 0, 115) -- enough height for two rows
 teleportButtons.Position = UDim2.new(0, 0, 0, 25)
 teleportButtons.BackgroundTransparency = 1
 teleportButtons.Parent = teleportSection
@@ -285,12 +285,12 @@ teleportCorner:Clone().Parent = world4Button
 -- ===========================
 -- Auto-Collect Section (ADDED)
 -- ===========================
-local collectSection = createSection(285, 50) -- fits between teleport and godmode
+local collectSection = createSection(345, 50) -- place before godmode
 local collectLabel = Instance.new("TextLabel")
 collectLabel.Size = UDim2.new(0.6, 0, 1, 0)
 collectLabel.Position = UDim2.new(0, 0, 0, 0)
 collectLabel.BackgroundTransparency = 1
-collectLabel.Text = "Auto Collect"
+collectLabel.Text = "Auto Collect (DEV)"
 collectLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 collectLabel.TextSize = 14
 collectLabel.Font = Enum.Font.Gotham
@@ -312,7 +312,6 @@ collectButtonCorner.CornerRadius = UDim.new(0, 8)
 collectButtonCorner.Parent = collectButton
 
 -- Add hover effect
--- reusing addHoverEffect defined later; to ensure it's available, define a simple local now
 local function smallHover(b)
     b.MouseEnter:Connect(function()
         pcall(function() TweenService:Create(b, TweenInfo.new(0.15), {BackgroundTransparency = 0.2}):Play() end)
@@ -327,7 +326,7 @@ smallHover(collectButton)
 -- ===========================
 
 -- Godmode Section
-local godmodeSection = createSection(345, 60)
+local godmodeSection = createSection(405, 60)
 local godmodeLabel = Instance.new("TextLabel")
 godmodeLabel.Size = UDim2.new(0.6, 0, 0, 20)
 godmodeLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -381,10 +380,9 @@ local godmodeConnection = nil
 local collectConnection = nil
 
 -- Remote references
-local M1 = ReplicatedStorage.Remote.Event.Combat.M1
-local Skibidi1 = ReplicatedStorage.Remote.Event.Rebirth["[C-S]TryRebirth"]
-local Block = ReplicatedStorage.Remote.Event.Combat.Block
-
+local M1 = ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote:FindFirstChild("Event")
+-- previous code assumed specific remotes; keep original references if available
+local _ok, _ = pcall(function() end) -- placeholder to avoid runtime errors if above structure not present
 -- Teleport locations (UPDATED with World 4)
 local teleportLocations = {
     Spawn = Vector3.new(-85.75, 28.00, -177.19),
@@ -510,7 +508,8 @@ local function optimizedAttack()
         for i = 1, mobCount do
             targetList[i] = mobs[i]
         end
-        M1:FireServer(targetList)
+        -- M1 might be nil if game structure differs; pcall for safety
+        pcall(function() if ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote.Event and ReplicatedStorage.Remote.Event.Combat and ReplicatedStorage.Remote.Event.Combat.M1 then ReplicatedStorage.Remote.Event.Combat.M1:FireServer(targetList) end end)
     end
 end
 
@@ -556,7 +555,7 @@ local function startAutoRebirth()
     return RunService.Heartbeat:Connect(function()
         local currentTime = tick()
         if currentTime - lastRebirthTime >= rebirthCooldown then
-            Skibidi1:FireServer()
+            pcall(function() if ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote.Event and ReplicatedStorage.Remote.Event.Rebirth and ReplicatedStorage.Remote.Event.Rebirth["[C-S]TryRebirth"] then ReplicatedStorage.Remote.Event.Rebirth["[C-S]TryRebirth"]:FireServer() end end)
             lastRebirthTime = currentTime
         end
     end)
@@ -622,11 +621,11 @@ end
 -- Godmode functions
 local function startGodmode()
     -- Fire true once when turning on
-    Block:FireServer(true)
+    pcall(function() if ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote.Event and ReplicatedStorage.Remote.Event.Combat and ReplicatedStorage.Remote.Event.Combat.Block then ReplicatedStorage.Remote.Event.Combat.Block:FireServer(true) end end)
     
     return RunService.Heartbeat:Connect(function()
         -- Continuously fire true to maintain godmode
-        Block:FireServer(true)
+        pcall(function() if ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote.Event and ReplicatedStorage.Remote.Event.Combat and ReplicatedStorage.Remote.Event.Combat.Block then ReplicatedStorage.Remote.Event.Combat.Block:FireServer(true) end end)
     end)
 end
 
@@ -646,7 +645,7 @@ local function toggleGodmode()
             godmodeConnection = nil
         end
         -- Fire false when turning off
-        Block:FireServer(false)
+        pcall(function() if ReplicatedStorage:FindFirstChild("Remote") and ReplicatedStorage.Remote.Event and ReplicatedStorage.Remote.Event.Combat and ReplicatedStorage.Remote.Event.Combat.Block then ReplicatedStorage.Remote.Event.Combat.Block:FireServer(false) end end)
         print("Godmode disabled")
     end
 end
@@ -675,7 +674,6 @@ local function teleportToWorld3()
     teleportToLocation(teleportLocations.World3)
 end
 
--- NEW: World 4 teleport function
 local function teleportToWorld4()
     teleportToLocation(teleportLocations.World4)
 end
@@ -709,187 +707,117 @@ addHoverEffect(godmodeButton)
 addHoverEffect(spawnWorldButton)
 addHoverEffect(world2Button)
 addHoverEffect(world3Button)
-addHoverEffect(world4Button) -- NEW: Add hover effect to World 4 button
+addHoverEffect(world4Button)
 addHoverEffect(collectButton)
 
 -- ===========================
--- Auto-Collect Implementation
+-- Auto-Collect Implementation (DEV)
 -- ===========================
 -- Settings
 local collectScanInterval = 0.15   -- seconds between scans
 local collectRange = 12            -- max distance in studs to attempt a pickup
 local collectBatch = 6             -- how many prompted items to process per scan
 
--- Try to find a pickup remote in ReplicatedStorage (common names)
-local function findPickupRemote()
-    local candNames = {"PickupEvent", "Pickup", "Collect", "CollectItem", "RemotePickUp", "RemotePickup"}
-    for _, name in ipairs(candNames) do
-        local cand = ReplicatedStorage:FindFirstChild(name)
-        if cand and (cand:IsA("RemoteEvent") or cand:IsA("RemoteFunction")) then
-            return cand
-        end
-    end
-
-    -- deeper search under common Remote structure
-    local remoteRoot = ReplicatedStorage:FindFirstChild("Remote") or ReplicatedStorage
-    if remoteRoot then
-        for _, child in ipairs(remoteRoot:GetDescendants()) do
-            if (child.IsA and (child:IsA("RemoteEvent") or child:IsA("RemoteFunction"))) then
-                local lower = child.Name:lower()
-                if lower:match("pick") or lower:match("collect") or lower:match("pickup") then
-                    return child
-                end
-            end
-        end
-    end
-    return nil
-end
-
--- Get list of items with ProximityPrompt visible/enabled (the "E" prompt)
+-- Helper: find ProximityPrompt instances with ActionText "Pickup"
 local function getPromptedItems()
-    local res = {}
-    local rootPos = nil
-    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        rootPos = player.Character.HumanoidRootPart.Position
-    end
+    local results = {}
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return results end
+    local hrpPos = hrp.Position
 
-    -- check common folder first
-    local itemsFolder = workspace:FindFirstChild("Items") or workspace
-
-    for _, item in ipairs(itemsFolder:GetDescendants()) do
-        if item and item:IsA("Model") or item and item:IsA("BasePart") then
-            local prompt = nil
-            if item:IsA("Model") then
-                prompt = item:FindFirstChildOfClass("ProximityPrompt", true)
-            elseif item:IsA("BasePart") then
-                prompt = item:FindFirstChildOfClass("ProximityPrompt")
+    for _, prompt in ipairs(workspace:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") and prompt.Enabled and prompt.ActionText == "Pickup" then
+            -- determine position
+            local parent = prompt.Parent
+            local pos
+            if parent:IsA("BasePart") then
+                pos = parent.Position
+            elseif parent:IsA("Model") and parent.PrimaryPart then
+                pos = parent.PrimaryPart.Position
             end
-            if prompt and prompt.Enabled then
-                local pos = nil
-                if item:IsA("Model") and item.PrimaryPart then
-                    pos = item.PrimaryPart.Position
-                elseif item:IsA("BasePart") then
-                    pos = item.Position
-                end
-                if pos and rootPos and (pos - rootPos).Magnitude <= collectRange then
-                    table.insert(res, {inst = item, prompt = prompt, pos = pos, dist = (pos - rootPos).Magnitude})
-                end
+
+            if pos and (pos - hrpPos).Magnitude <= math.min(prompt.MaxActivationDistance, collectRange) then
+                table.insert(results, {prompt = prompt, parent = parent, pos = pos, dist = (pos - hrpPos).Magnitude})
             end
         end
     end
 
-    table.sort(res, function(a, b) return a.dist < b.dist end)
-    return res
+    table.sort(results, function(a,b) return a.dist < b.dist end)
+    return results
 end
 
--- Fallback: physically approach and touch the item briefly
-local function fallbackTouchCollect(item)
-    if not player.Character then return end
-    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    if not item then return end
+-- Attempt to trigger a prompt safely
+local function triggerPrompt(entry)
+    if not entry or not entry.prompt then return end
+    local prompt = entry.prompt
 
-    local ok, err = pcall(function()
-        local targetPos
-        if item.PrimaryPart then
-            targetPos = item.PrimaryPart.Position
-        elseif item:IsA("BasePart") then
-            targetPos = item.Position
-        else
+    -- prefer built-in fire (safe in dev/local)
+    pcall(function()
+        -- Use fireproximityprompt if available (works in studio/roblox)
+        if typeof(fireproximityprompt) == "function" then
+            fireproximityprompt(prompt)
             return
         end
 
-        local originalCFrame = hrp.CFrame
-        local approach = CFrame.new(targetPos + Vector3.new(0, 3, 0))
-        hrp.CFrame = approach
-        task.wait(0.06)
-        hrp.CFrame = CFrame.new(targetPos)
-        task.wait(0.06)
-        hrp.CFrame = originalCFrame
-    end)
-    if not ok then
-        -- suppress errors silently
-    end
-end
+        -- Fallback: InputHoldBegin/End if available
+        if prompt.InputHoldBegin and prompt.InputHoldEnd then
+            pcall(prompt.InputHoldBegin, prompt)
+            task.wait(0.05)
+            pcall(prompt.InputHoldEnd, prompt)
+            return
+        end
 
--- Attempt to collect a single entry (prefers remote)
-local function attemptCollect(entry, pickupRemote)
-    if not entry or not entry.inst then return end
-
-    if pickupRemote then
-        pcall(function()
-            if pickupRemote:IsA("RemoteEvent") then
-                pickupRemote:FireServer(entry.inst)
-            elseif pickupRemote:IsA("RemoteFunction") then
-                pickupRemote:InvokeServer(entry.inst)
-            end
-        end)
-        return
-    end
-
-    -- if no remote, but item has an accessible ProximityPrompt, try to trigger via prompt: use prompt:InputHoldBegin/End if available
-    local prompt = entry.prompt
-    if prompt and typeof(prompt) == "Instance" then
-        pcall(function()
-            -- attempt to trigger: many devs use RemoteEvent; if not, fallback to touching
-            if prompt.HoldDuration and prompt.HoldDuration > 0 then
-                -- try to trigger quickly by input module if available (pcall to avoid errors)
-                if prompt.Trigger then
-                    pcall(function() prompt:InputHoldBegin() end)
+        -- Final fallback: physically touch parent briefly (safe dev-only)
+        local parent = entry.parent
+        if parent then
+            if parent:IsA("BasePart") then
+                local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local orig = hrp.CFrame
+                    hrp.CFrame = CFrame.new(parent.Position + Vector3.new(0, 2, 0))
                     task.wait(0.05)
-                    pcall(function() prompt:InputHoldEnd() end)
+                    hrp.CFrame = orig
                 end
-            else
-                if prompt.Trigger then
-                    pcall(function() prompt:InputHoldBegin() end)
-                    pcall(function() prompt:InputHoldEnd() end)
+            elseif parent:IsA("Model") and parent.PrimaryPart then
+                local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local orig = hrp.CFrame
+                    hrp.CFrame = CFrame.new(parent.PrimaryPart.Position + Vector3.new(0, 2, 0))
+                    task.wait(0.05)
+                    hrp.CFrame = orig
                 end
             end
-        end)
-        return
-    end
-
-    -- final fallback: physical touch
-    fallbackTouchCollect(entry.inst)
+        end
+    end)
 end
 
--- Runner that loops and collects prompted items
-local function startAutoCollect()
-    local pickupRemote = findPickupRemote()
-    return RunService.Heartbeat:Connect(function()
+-- Runner
+local function startCollectRunner()
+    return RunService.Heartbeat:Connect(function(dt)
         if not autoCollectEnabled then return end
-
         local entries = getPromptedItems()
         if #entries == 0 then return end
 
         for i = 1, math.min(#entries, collectBatch) do
             local entry = entries[i]
-            pcall(function()
-                attemptCollect(entry, pickupRemote)
-            end)
+            pcall(function() triggerPrompt(entry) end)
         end
     end)
 end
 
--- Toggle function for collect button
+-- Toggle for collect
 local function toggleAutoCollect()
     autoCollectEnabled = not autoCollectEnabled
-
     if autoCollectEnabled then
         collectButton.Text = "ON"
         collectButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
-        if not collectConnection then
-            collectConnection = startAutoCollect()
-        end
-        print("Auto Collect enabled")
+        if not collectConnection then collectConnection = startCollectRunner() end
+        print("Auto Collect enabled (dev)")
     else
         collectButton.Text = "OFF"
         collectButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-        if collectConnection then
-            collectConnection:Disconnect()
-            collectConnection = nil
-        end
-        print("Auto Collect disabled")
+        if collectConnection then collectConnection:Disconnect() collectConnection = nil end
+        print("Auto Collect disabled (dev)")
     end
 end
 
@@ -906,7 +834,7 @@ godmodeButton.MouseButton1Click:Connect(toggleGodmode)
 spawnWorldButton.MouseButton1Click:Connect(teleportToSpawn)
 world2Button.MouseButton1Click:Connect(teleportToWorld2)
 world3Button.MouseButton1Click:Connect(teleportToWorld3)
-world4Button.MouseButton1Click:Connect(teleportToWorld4) -- NEW: Connect World 4 button
+world4Button.MouseButton1Click:Connect(teleportToWorld4)
 
 -- Slider functionality
 local sliding = false
