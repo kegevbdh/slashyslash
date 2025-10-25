@@ -1,0 +1,982 @@
+-- Ultimate Optimized Killaura GUI Script
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Create ScreenGui with high persistence priority
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "KillauraGUI"
+screenGui.DisplayOrder = 10
+screenGui.ResetOnSpawn = false -- This keeps the GUI persistent through death
+screenGui.Parent = playerGui
+
+-- Create circle toggle button (always visible, works on mobile)
+local circleButton = Instance.new("TextButton")
+circleButton.Name = "CircleToggle"
+circleButton.Size = UDim2.new(0, 60, 0, 60)
+circleButton.Position = UDim2.new(0, 20, 0, 20) -- Top left corner
+circleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 220)
+circleButton.Text = "✕"
+circleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+circleButton.TextSize = 20
+circleButton.BorderSizePixel = 0
+circleButton.ZIndex = 20
+circleButton.Parent = screenGui
+
+-- Make circle button circular
+local circleCorner = Instance.new("UICorner")
+circleCorner.CornerRadius = UDim.new(1, 0) -- Perfect circle
+circleCorner.Parent = circleButton
+
+-- Add shadow to circle button
+local circleShadow = Instance.new("ImageLabel")
+circleShadow.Name = "CircleShadow"
+circleShadow.Image = "rbxassetid://5554236805"
+circleShadow.ScaleType = Enum.ScaleType.Slice
+circleShadow.SliceCenter = Rect.new(23, 23, 277, 277)
+circleShadow.ImageTransparency = 0.5
+circleShadow.Size = UDim2.new(1, 20, 1, 20)
+circleShadow.Position = UDim2.new(0, -10, 0, -10)
+circleShadow.BackgroundTransparency = 1
+circleShadow.ZIndex = 19
+circleShadow.Parent = circleButton
+
+-- Create main frame (larger for teleport buttons)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 300, 0, 450) -- Increased height for godmode section
+mainFrame.Position = UDim2.new(1, -310, 1, -460) -- Bottom right
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = true -- Start visible as requested
+mainFrame.Parent = screenGui
+
+-- Create corner for rounded look
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = mainFrame
+
+-- Add subtle shadow effect
+local shadow = Instance.new("ImageLabel")
+shadow.Name = "Shadow"
+shadow.Image = "rbxassetid://5554236805"
+shadow.ScaleType = Enum.ScaleType.Slice
+shadow.SliceCenter = Rect.new(23, 23, 277, 277)
+shadow.ImageTransparency = 0.5
+shadow.Size = UDim2.new(1, 30, 1, 30)
+shadow.Position = UDim2.new(0, -15, 0, -15)
+shadow.BackgroundTransparency = 1
+shadow.Parent = mainFrame
+
+-- Create title label
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 35)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+titleLabel.Text = "ULTIMATE AUTO FARM"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 16
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.BorderSizePixel = 0
+titleLabel.Parent = mainFrame
+
+-- Add corner to title
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 12)
+titleCorner.Parent = titleLabel
+
+-- Create sections with proper spacing
+local function createSection(yPosition, height)
+    local section = Instance.new("Frame")
+    section.Size = UDim2.new(1, -20, 0, height)
+    section.Position = UDim2.new(0, 10, 0, yPosition)
+    section.BackgroundTransparency = 1
+    section.Parent = mainFrame
+    return section
+end
+
+-- Killaura Section
+local killauraSection = createSection(45, 40)
+local killauraLabel = Instance.new("TextLabel")
+killauraLabel.Size = UDim2.new(0.6, 0, 1, 0)
+killauraLabel.Position = UDim2.new(0, 0, 0, 0)
+killauraLabel.BackgroundTransparency = 1
+killauraLabel.Text = "KillAura"
+killauraLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+killauraLabel.TextSize = 14
+killauraLabel.Font = Enum.Font.Gotham
+killauraLabel.TextXAlignment = Enum.TextXAlignment.Left
+killauraLabel.Parent = killauraSection
+
+local killauraButton = Instance.new("TextButton")
+killauraButton.Size = UDim2.new(0.35, 0, 0.7, 0)
+killauraButton.Position = UDim2.new(0.65, 0, 0.15, 0)
+killauraButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+killauraButton.Text = "OFF"
+killauraButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+killauraButton.TextSize = 12
+killauraButton.BorderSizePixel = 0
+killauraButton.Parent = killauraSection
+
+local killauraButtonCorner = Instance.new("UICorner")
+killauraButtonCorner.CornerRadius = UDim.new(0, 8)
+killauraButtonCorner.Parent = killauraButton
+
+-- Auto Rebirth Section
+local rebirthSection = createSection(95, 40)
+local rebirthLabel = Instance.new("TextLabel")
+rebirthLabel.Size = UDim2.new(0.6, 0, 1, 0)
+rebirthLabel.Position = UDim2.new(0, 0, 0, 0)
+rebirthLabel.BackgroundTransparency = 1
+rebirthLabel.Text = "Auto Rebirth"
+rebirthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+rebirthLabel.TextSize = 14
+rebirthLabel.Font = Enum.Font.Gotham
+rebirthLabel.TextXAlignment = Enum.TextXAlignment.Left
+rebirthLabel.Parent = rebirthSection
+
+local rebirthButton = Instance.new("TextButton")
+rebirthButton.Size = UDim2.new(0.35, 0, 0.7, 0)
+rebirthButton.Position = UDim2.new(0.65, 0, 0.15, 0)
+rebirthButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+rebirthButton.Text = "OFF"
+rebirthButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+rebirthButton.TextSize = 12
+rebirthButton.BorderSizePixel = 0
+rebirthButton.Parent = rebirthSection
+
+local rebirthButtonCorner = Instance.new("UICorner")
+rebirthButtonCorner.CornerRadius = UDim.new(0, 8)
+rebirthButtonCorner.Parent = rebirthButton
+
+-- Speedhack Section
+local speedSection = createSection(145, 60)
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(0.6, 0, 0, 20)
+speedLabel.Position = UDim2.new(0, 0, 0, 0)
+speedLabel.BackgroundTransparency = 1
+speedLabel.Text = "Speed Hack: 16"
+speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedLabel.TextSize = 14
+speedLabel.Font = Enum.Font.Gotham
+speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+speedLabel.Parent = speedSection
+
+-- Speed slider with toggle on the right
+local speedSlider = Instance.new("Frame")
+speedSlider.Size = UDim2.new(0.6, 0, 0, 20)
+speedSlider.Position = UDim2.new(0, 0, 0, 25)
+speedSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+speedSlider.BorderSizePixel = 0
+speedSlider.Parent = speedSection
+
+local sliderCorner = Instance.new("UICorner")
+sliderCorner.CornerRadius = UDim.new(0, 8)
+sliderCorner.Parent = speedSlider
+
+local sliderFill = Instance.new("Frame")
+sliderFill.Size = UDim2.new(0.2, 0, 1, 0)
+sliderFill.Position = UDim2.new(0, 0, 0, 0)
+sliderFill.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+sliderFill.BorderSizePixel = 0
+sliderFill.Parent = speedSlider
+
+local fillCorner = Instance.new("UICorner")
+fillCorner.CornerRadius = UDim.new(0, 8)
+fillCorner.Parent = sliderFill
+
+-- Speed toggle button
+local speedToggle = Instance.new("TextButton")
+speedToggle.Size = UDim2.new(0.35, 0, 0.6, 0)
+speedToggle.Position = UDim2.new(0.65, 0, 0, 25)
+speedToggle.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+speedToggle.Text = "OFF"
+speedToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedToggle.TextSize = 12
+speedToggle.BorderSizePixel = 0
+speedToggle.Parent = speedSection
+
+local speedToggleCorner = Instance.new("UICorner")
+speedToggleCorner.CornerRadius = UDim.new(0, 8)
+speedToggleCorner.Parent = speedToggle
+
+-- Teleport Section
+local teleportSection = createSection(215, 120) -- Increased height for World 4 button
+local teleportLabel = Instance.new("TextLabel")
+teleportLabel.Size = UDim2.new(1, 0, 0, 20)
+teleportLabel.Position = UDim2.new(0, 0, 0, 0)
+teleportLabel.BackgroundTransparency = 1
+teleportLabel.Text = "World Teleport"
+teleportLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+teleportLabel.TextSize = 14
+teleportLabel.Font = Enum.Font.GothamBold
+teleportLabel.TextXAlignment = Enum.TextXAlignment.Left
+teleportLabel.Parent = teleportSection
+
+-- Teleport buttons container
+local teleportButtons = Instance.new("Frame")
+teleportButtons.Size = UDim2.new(1, 0, 0, 95) -- Increased height for additional row
+teleportButtons.Position = UDim2.new(0, 0, 0, 25)
+teleportButtons.BackgroundTransparency = 1
+teleportButtons.Parent = teleportSection
+
+-- Spawn World button
+local spawnWorldButton = Instance.new("TextButton")
+spawnWorldButton.Size = UDim2.new(0.32, 0, 0.4, 0)
+spawnWorldButton.Position = UDim2.new(0, 0, 0, 0)
+spawnWorldButton.BackgroundColor3 = Color3.fromRGB(80, 160, 80)
+spawnWorldButton.Text = "Spawn World"
+spawnWorldButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+spawnWorldButton.TextSize = 10
+spawnWorldButton.TextWrapped = true
+spawnWorldButton.BorderSizePixel = 0
+spawnWorldButton.Parent = teleportButtons
+
+-- Rebirth World 2 button
+local world2Button = Instance.new("TextButton")
+world2Button.Size = UDim2.new(0.32, 0, 0.4, 0)
+world2Button.Position = UDim2.new(0.34, 0, 0, 0)
+world2Button.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
+world2Button.Text = "World 2"
+world2Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+world2Button.TextSize = 10
+world2Button.TextWrapped = true
+world2Button.BorderSizePixel = 0
+world2Button.Parent = teleportButtons
+
+-- Rebirth World 3 button
+local world3Button = Instance.new("TextButton")
+world3Button.Size = UDim2.new(0.32, 0, 0.4, 0)
+world3Button.Position = UDim2.new(0.68, 0, 0, 0)
+world3Button.BackgroundColor3 = Color3.fromRGB(180, 80, 180)
+world3Button.Text = "World 3"
+world3Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+world3Button.TextSize = 10
+world3Button.TextWrapped = true
+world3Button.BorderSizePixel = 0
+world3Button.Parent = teleportButtons
+
+-- World 4 button (NEW)
+local world4Button = Instance.new("TextButton")
+world4Button.Size = UDim2.new(0.32, 0, 0.4, 0)
+world4Button.Position = UDim2.new(0, 0, 0.5, 0)
+world4Button.BackgroundColor3 = Color3.fromRGB(220, 120, 60)
+world4Button.Text = "World 4"
+world4Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+world4Button.TextSize = 10
+world4Button.TextWrapped = true
+world4Button.BorderSizePixel = 0
+world4Button.Parent = teleportButtons
+
+-- Add corners to teleport buttons
+local teleportCorner = Instance.new("UICorner")
+teleportCorner.CornerRadius = UDim.new(0, 6)
+teleportCorner.Parent = spawnWorldButton
+teleportCorner:Clone().Parent = world2Button
+teleportCorner:Clone().Parent = world3Button
+teleportCorner:Clone().Parent = world4Button
+
+-- ===========================
+-- Auto-Collect Section (ADDED)
+-- ===========================
+local collectSection = createSection(285, 50) -- fits between teleport and godmode
+local collectLabel = Instance.new("TextLabel")
+collectLabel.Size = UDim2.new(0.6, 0, 1, 0)
+collectLabel.Position = UDim2.new(0, 0, 0, 0)
+collectLabel.BackgroundTransparency = 1
+collectLabel.Text = "Auto Collect"
+collectLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+collectLabel.TextSize = 14
+collectLabel.Font = Enum.Font.Gotham
+collectLabel.TextXAlignment = Enum.TextXAlignment.Left
+collectLabel.Parent = collectSection
+
+local collectButton = Instance.new("TextButton")
+collectButton.Size = UDim2.new(0.35, 0, 0.7, 0)
+collectButton.Position = UDim2.new(0.65, 0, 0.15, 0)
+collectButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+collectButton.Text = "OFF"
+collectButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+collectButton.TextSize = 12
+collectButton.BorderSizePixel = 0
+collectButton.Parent = collectSection
+
+local collectButtonCorner = Instance.new("UICorner")
+collectButtonCorner.CornerRadius = UDim.new(0, 8)
+collectButtonCorner.Parent = collectButton
+
+-- Add hover effect
+-- reusing addHoverEffect defined later; to ensure it's available, define a simple local now
+local function smallHover(b)
+    b.MouseEnter:Connect(function()
+        pcall(function() TweenService:Create(b, TweenInfo.new(0.15), {BackgroundTransparency = 0.2}):Play() end)
+    end)
+    b.MouseLeave:Connect(function()
+        pcall(function() TweenService:Create(b, TweenInfo.new(0.15), {BackgroundTransparency = 0}):Play() end)
+    end)
+end
+smallHover(collectButton)
+-- ===========================
+-- End Auto-Collect Section
+-- ===========================
+
+-- Godmode Section
+local godmodeSection = createSection(345, 60)
+local godmodeLabel = Instance.new("TextLabel")
+godmodeLabel.Size = UDim2.new(0.6, 0, 0, 20)
+godmodeLabel.Position = UDim2.new(0, 0, 0, 0)
+godmodeLabel.BackgroundTransparency = 1
+godmodeLabel.Text = "Godmode"
+godmodeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+godmodeLabel.TextSize = 14
+godmodeLabel.Font = Enum.Font.Gotham
+godmodeLabel.TextXAlignment = Enum.TextXAlignment.Left
+godmodeLabel.Parent = godmodeSection
+
+-- Godmode disclaimer text
+local godmodeDisclaimer = Instance.new("TextLabel")
+godmodeDisclaimer.Size = UDim2.new(1, 0, 0, 15)
+godmodeDisclaimer.Position = UDim2.new(0, 0, 0, 20)
+godmodeDisclaimer.BackgroundTransparency = 1
+godmodeDisclaimer.Text = "Unequip shield + use with KillAura"
+godmodeDisclaimer.TextColor3 = Color3.fromRGB(255, 100, 100)
+godmodeDisclaimer.TextSize = 10
+godmodeDisclaimer.Font = Enum.Font.Gotham
+godmodeDisclaimer.TextXAlignment = Enum.TextXAlignment.Left
+godmodeDisclaimer.Parent = godmodeSection
+
+local godmodeButton = Instance.new("TextButton")
+godmodeButton.Size = UDim2.new(0.35, 0, 0.6, 0)
+godmodeButton.Position = UDim2.new(0.65, 0, 0, 0)
+godmodeButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+godmodeButton.Text = "OFF"
+godmodeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+godmodeButton.TextSize = 12
+godmodeButton.BorderSizePixel = 0
+godmodeButton.Parent = godmodeSection
+
+local godmodeButtonCorner = Instance.new("UICorner")
+godmodeButtonCorner.CornerRadius = UDim.new(0, 8)
+godmodeButtonCorner.Parent = godmodeButton
+
+-- Variables
+local killauraEnabled = false
+local rebirthEnabled = false
+local speedhackEnabled = false
+local godmodeEnabled = false
+local autoCollectEnabled = false
+local currentSpeed = 16
+local guiVisible = true -- Start with GUI visible
+
+local killauraConnection = nil
+local rebirthConnection = nil
+local speedhackConnection = nil
+local godmodeConnection = nil
+local collectConnection = nil
+
+-- Remote references
+local M1 = ReplicatedStorage.Remote.Event.Combat.M1
+local Skibidi1 = ReplicatedStorage.Remote.Event.Rebirth["[C-S]TryRebirth"]
+local Block = ReplicatedStorage.Remote.Event.Combat.Block
+
+-- Teleport locations (UPDATED with World 4)
+local teleportLocations = {
+    Spawn = Vector3.new(-85.75, 28.00, -177.19),
+    World2 = Vector3.new(1023.89, 23.00, 259.60),
+    World3 = Vector3.new(3137.17, 23.00, 374.65),
+    World4 = Vector3.new(5428.96, 37.00, 328.41) -- NEW World 4 coordinates
+}
+
+-- GUI Toggle Function
+local function toggleGUI()
+    guiVisible = not guiVisible
+    mainFrame.Visible = guiVisible
+    
+    if guiVisible then
+        circleButton.Text = "✕"
+        circleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 220)
+        -- Smooth fade in animation
+        mainFrame.BackgroundTransparency = 1
+        TweenService:Create(mainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
+    else
+        circleButton.Text = "☰"
+        circleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+        -- Smooth fade out animation
+        TweenService:Create(mainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+        -- Hide after animation
+        delay(0.3, function()
+            if not guiVisible then
+                mainFrame.Visible = false
+            end
+        end)
+    end
+end
+
+-- Make circle button draggable (for mobile users to reposition)
+local circleDragging = false
+local circleDragStart, circleStartPos
+
+local function updateCirclePosition(input)
+    local delta = input.Position - circleDragStart
+    circleButton.Position = UDim2.new(circleStartPos.X.Scale, circleStartPos.X.Offset + delta.X, circleStartPos.Y.Scale, circleStartPos.Y.Offset + delta.Y)
+end
+
+-- Circle button interactions
+circleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        -- Check if it's a tap (short press) or drag (long press)
+        local tapTime = tick()
+        circleDragging = true
+        circleDragStart = input.Position
+        circleStartPos = circleButton.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                circleDragging = false
+                -- If it was a short tap (less than 0.5 seconds), toggle GUI
+                if tick() - tapTime < 0.5 then
+                    toggleGUI()
+                end
+            end
+        end)
+    end
+end)
+
+circleButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if circleDragging then
+            -- Update drag input for mobile
+            updateCirclePosition(input)
+        end
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if circleDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        updateCirclePosition(input)
+    end
+end)
+
+-- Ultra-optimized mob caching with object pooling
+local mobCache = {
+    mobs = {},
+    lastUpdate = 0,
+    updateInterval = 0.5,
+    mobCount = 0
+}
+
+local function updateMobCache()
+    local currentTime = tick()
+    
+    if currentTime - mobCache.lastUpdate >= mobCache.updateInterval then
+        mobCache.mobs = {}
+        mobCache.mobCount = 0
+        
+        local mobFolder = workspace:FindFirstChild("Live")
+        if mobFolder then
+            local mobModel = mobFolder:FindFirstChild("MobModel")
+            if mobModel then
+                local children = mobModel:GetChildren()
+                for i = 1, #children do
+                    local mob = children[i]
+                    if mob:IsA("Model") then
+                        local humanoid = mob:FindFirstChild("Humanoid")
+                        if humanoid and humanoid.Health > 0 then
+                            mobCache.mobCount += 1
+                            mobCache.mobs[mobCache.mobCount] = mob.Name
+                        end
+                    end
+                end
+            end
+        end
+        mobCache.lastUpdate = currentTime
+    end
+    
+    return mobCache.mobs, mobCache.mobCount
+end
+
+-- Extreme optimization: Single remote call with all mobs
+local function optimizedAttack()
+    local mobs, mobCount = updateMobCache()
+    
+    if mobCount > 0 then
+        local targetList = {}
+        for i = 1, mobCount do
+            targetList[i] = mobs[i]
+        end
+        M1:FireServer(targetList)
+    end
+end
+
+-- Ultra-optimized killaura
+local function startUltraKillaura()
+    local lastAttackTime = 0
+    local attackCooldown = 0.08
+    
+    return RunService.Heartbeat:Connect(function()
+        local currentTime = tick()
+        if currentTime - lastAttackTime >= attackCooldown then
+            optimizedAttack()
+            lastAttackTime = currentTime
+        end
+    end)
+end
+
+-- Killaura toggle
+local function toggleKillaura()
+    killauraEnabled = not killauraEnabled
+    
+    if killauraEnabled then
+        killauraButton.Text = "ON"
+        killauraButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
+        killauraConnection = startUltraKillaura()
+        print("Ultra Killaura enabled")
+    else
+        killauraButton.Text = "OFF"
+        killauraButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+        if killauraConnection then
+            killauraConnection:Disconnect()
+            killauraConnection = nil
+        end
+        print("Killaura disabled")
+    end
+end
+
+-- Auto Rebirth function
+local function startAutoRebirth()
+    local lastRebirthTime = 0
+    local rebirthCooldown = 0.5
+    
+    return RunService.Heartbeat:Connect(function()
+        local currentTime = tick()
+        if currentTime - lastRebirthTime >= rebirthCooldown then
+            Skibidi1:FireServer()
+            lastRebirthTime = currentTime
+        end
+    end)
+end
+
+-- Rebirth toggle
+local function toggleRebirth()
+    rebirthEnabled = not rebirthEnabled
+    
+    if rebirthEnabled then
+        rebirthButton.Text = "ON"
+        rebirthButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
+        rebirthConnection = startAutoRebirth()
+        print("Auto Rebirth enabled")
+    else
+        rebirthButton.Text = "OFF"
+        rebirthButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+        if rebirthConnection then
+            rebirthConnection:Disconnect()
+            rebirthConnection = nil
+        end
+        print("Auto Rebirth disabled")
+    end
+end
+
+-- Speedhack functions
+local function startSpeedhack()
+    local function applySpeedToCharacter(character)
+        if character then
+            local humanoid = character:WaitForChild("Humanoid")
+            humanoid.WalkSpeed = currentSpeed
+        end
+    end
+    
+    if player.Character then
+        applySpeedToCharacter(player.Character)
+    end
+    
+    player.CharacterAdded:Connect(applySpeedToCharacter)
+end
+
+local function toggleSpeedhack()
+    speedhackEnabled = not speedhackEnabled
+    
+    if speedhackEnabled then
+        speedToggle.Text = "ON"
+        speedToggle.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
+        startSpeedhack()
+        print("Speedhack enabled: " .. currentSpeed)
+    else
+        speedToggle.Text = "OFF"
+        speedToggle.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+        if player.Character then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 16
+            end
+        end
+        print("Speedhack disabled")
+    end
+end
+
+-- Godmode functions
+local function startGodmode()
+    -- Fire true once when turning on
+    Block:FireServer(true)
+    
+    return RunService.Heartbeat:Connect(function()
+        -- Continuously fire true to maintain godmode
+        Block:FireServer(true)
+    end)
+end
+
+local function toggleGodmode()
+    godmodeEnabled = not godmodeEnabled
+    
+    if godmodeEnabled then
+        godmodeButton.Text = "ON"
+        godmodeButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
+        godmodeConnection = startGodmode()
+        print("Godmode enabled - Make sure to unequip shield and use with KillAura!")
+    else
+        godmodeButton.Text = "OFF"
+        godmodeButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+        if godmodeConnection then
+            godmodeConnection:Disconnect()
+            godmodeConnection = nil
+        end
+        -- Fire false when turning off
+        Block:FireServer(false)
+        print("Godmode disabled")
+    end
+end
+
+-- Teleport functions
+local function teleportToLocation(location)
+    local character = player.Character
+    if character then
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            humanoidRootPart.CFrame = CFrame.new(location)
+            print("Teleported to: " .. tostring(location))
+        end
+    end
+end
+
+local function teleportToSpawn()
+    teleportToLocation(teleportLocations.Spawn)
+end
+
+local function teleportToWorld2()
+    teleportToLocation(teleportLocations.World2)
+end
+
+local function teleportToWorld3()
+    teleportToLocation(teleportLocations.World3)
+end
+
+-- NEW: World 4 teleport function
+local function teleportToWorld4()
+    teleportToLocation(teleportLocations.World4)
+end
+
+-- Slider update function
+local function updateSlider(value)
+    currentSpeed = math.floor(16 + (value * 84))
+    speedLabel.Text = "Speed Hack: " .. currentSpeed
+    sliderFill.Size = UDim2.new(value, 0, 1, 0)
+    
+    if speedhackEnabled then
+        toggleSpeedhack()
+        toggleSpeedhack()
+    end
+end
+
+-- Add hover effects to all buttons
+local function addHoverEffect(button)
+    button.MouseEnter:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play()
+    end)
+    button.MouseLeave:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+    end)
+end
+
+addHoverEffect(killauraButton)
+addHoverEffect(rebirthButton)
+addHoverEffect(speedToggle)
+addHoverEffect(godmodeButton)
+addHoverEffect(spawnWorldButton)
+addHoverEffect(world2Button)
+addHoverEffect(world3Button)
+addHoverEffect(world4Button) -- NEW: Add hover effect to World 4 button
+addHoverEffect(collectButton)
+
+-- ===========================
+-- Auto-Collect Implementation
+-- ===========================
+-- Settings
+local collectScanInterval = 0.15   -- seconds between scans
+local collectRange = 12            -- max distance in studs to attempt a pickup
+local collectBatch = 6             -- how many prompted items to process per scan
+
+-- Try to find a pickup remote in ReplicatedStorage (common names)
+local function findPickupRemote()
+    local candNames = {"PickupEvent", "Pickup", "Collect", "CollectItem", "RemotePickUp", "RemotePickup"}
+    for _, name in ipairs(candNames) do
+        local cand = ReplicatedStorage:FindFirstChild(name)
+        if cand and (cand:IsA("RemoteEvent") or cand:IsA("RemoteFunction")) then
+            return cand
+        end
+    end
+
+    -- deeper search under common Remote structure
+    local remoteRoot = ReplicatedStorage:FindFirstChild("Remote") or ReplicatedStorage
+    if remoteRoot then
+        for _, child in ipairs(remoteRoot:GetDescendants()) do
+            if (child.IsA and (child:IsA("RemoteEvent") or child:IsA("RemoteFunction"))) then
+                local lower = child.Name:lower()
+                if lower:match("pick") or lower:match("collect") or lower:match("pickup") then
+                    return child
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- Get list of items with ProximityPrompt visible/enabled (the "E" prompt)
+local function getPromptedItems()
+    local res = {}
+    local rootPos = nil
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        rootPos = player.Character.HumanoidRootPart.Position
+    end
+
+    -- check common folder first
+    local itemsFolder = workspace:FindFirstChild("Items") or workspace
+
+    for _, item in ipairs(itemsFolder:GetDescendants()) do
+        if item and item:IsA("Model") or item and item:IsA("BasePart") then
+            local prompt = nil
+            if item:IsA("Model") then
+                prompt = item:FindFirstChildOfClass("ProximityPrompt", true)
+            elseif item:IsA("BasePart") then
+                prompt = item:FindFirstChildOfClass("ProximityPrompt")
+            end
+            if prompt and prompt.Enabled then
+                local pos = nil
+                if item:IsA("Model") and item.PrimaryPart then
+                    pos = item.PrimaryPart.Position
+                elseif item:IsA("BasePart") then
+                    pos = item.Position
+                end
+                if pos and rootPos and (pos - rootPos).Magnitude <= collectRange then
+                    table.insert(res, {inst = item, prompt = prompt, pos = pos, dist = (pos - rootPos).Magnitude})
+                end
+            end
+        end
+    end
+
+    table.sort(res, function(a, b) return a.dist < b.dist end)
+    return res
+end
+
+-- Fallback: physically approach and touch the item briefly
+local function fallbackTouchCollect(item)
+    if not player.Character then return end
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    if not item then return end
+
+    local ok, err = pcall(function()
+        local targetPos
+        if item.PrimaryPart then
+            targetPos = item.PrimaryPart.Position
+        elseif item:IsA("BasePart") then
+            targetPos = item.Position
+        else
+            return
+        end
+
+        local originalCFrame = hrp.CFrame
+        local approach = CFrame.new(targetPos + Vector3.new(0, 3, 0))
+        hrp.CFrame = approach
+        task.wait(0.06)
+        hrp.CFrame = CFrame.new(targetPos)
+        task.wait(0.06)
+        hrp.CFrame = originalCFrame
+    end)
+    if not ok then
+        -- suppress errors silently
+    end
+end
+
+-- Attempt to collect a single entry (prefers remote)
+local function attemptCollect(entry, pickupRemote)
+    if not entry or not entry.inst then return end
+
+    if pickupRemote then
+        pcall(function()
+            if pickupRemote:IsA("RemoteEvent") then
+                pickupRemote:FireServer(entry.inst)
+            elseif pickupRemote:IsA("RemoteFunction") then
+                pickupRemote:InvokeServer(entry.inst)
+            end
+        end)
+        return
+    end
+
+    -- if no remote, but item has an accessible ProximityPrompt, try to trigger via prompt: use prompt:InputHoldBegin/End if available
+    local prompt = entry.prompt
+    if prompt and typeof(prompt) == "Instance" then
+        pcall(function()
+            -- attempt to trigger: many devs use RemoteEvent; if not, fallback to touching
+            if prompt.HoldDuration and prompt.HoldDuration > 0 then
+                -- try to trigger quickly by input module if available (pcall to avoid errors)
+                if prompt.Trigger then
+                    pcall(function() prompt:InputHoldBegin() end)
+                    task.wait(0.05)
+                    pcall(function() prompt:InputHoldEnd() end)
+                end
+            else
+                if prompt.Trigger then
+                    pcall(function() prompt:InputHoldBegin() end)
+                    pcall(function() prompt:InputHoldEnd() end)
+                end
+            end
+        end)
+        return
+    end
+
+    -- final fallback: physical touch
+    fallbackTouchCollect(entry.inst)
+end
+
+-- Runner that loops and collects prompted items
+local function startAutoCollect()
+    local pickupRemote = findPickupRemote()
+    return RunService.Heartbeat:Connect(function()
+        if not autoCollectEnabled then return end
+
+        local entries = getPromptedItems()
+        if #entries == 0 then return end
+
+        for i = 1, math.min(#entries, collectBatch) do
+            local entry = entries[i]
+            pcall(function()
+                attemptCollect(entry, pickupRemote)
+            end)
+        end
+    end)
+end
+
+-- Toggle function for collect button
+local function toggleAutoCollect()
+    autoCollectEnabled = not autoCollectEnabled
+
+    if autoCollectEnabled then
+        collectButton.Text = "ON"
+        collectButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
+        if not collectConnection then
+            collectConnection = startAutoCollect()
+        end
+        print("Auto Collect enabled")
+    else
+        collectButton.Text = "OFF"
+        collectButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+        if collectConnection then
+            collectConnection:Disconnect()
+            collectConnection = nil
+        end
+        print("Auto Collect disabled")
+    end
+end
+
+collectButton.MouseButton1Click:Connect(toggleAutoCollect)
+-- ===========================
+-- End Auto-Collect Implementation
+-- ===========================
+
+-- Connect all other buttons
+killauraButton.MouseButton1Click:Connect(toggleKillaura)
+rebirthButton.MouseButton1Click:Connect(toggleRebirth)
+speedToggle.MouseButton1Click:Connect(toggleSpeedhack)
+godmodeButton.MouseButton1Click:Connect(toggleGodmode)
+spawnWorldButton.MouseButton1Click:Connect(teleportToSpawn)
+world2Button.MouseButton1Click:Connect(teleportToWorld2)
+world3Button.MouseButton1Click:Connect(teleportToWorld3)
+world4Button.MouseButton1Click:Connect(teleportToWorld4) -- NEW: Connect World 4 button
+
+-- Slider functionality
+local sliding = false
+speedSlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        sliding = true
+    end
+end)
+
+speedSlider.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        sliding = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local sliderAbsolutePosition = speedSlider.AbsolutePosition.X
+        local sliderAbsoluteSize = speedSlider.AbsoluteSize.X
+        local mouseX = input.Position.X
+        
+        local relativeX = math.clamp(mouseX - sliderAbsolutePosition, 0, sliderAbsoluteSize)
+        local value = relativeX / sliderAbsoluteSize
+        updateSlider(value)
+    end
+end)
+
+-- Make title bar draggable
+local dragging = false
+local dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+titleLabel.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+titleLabel.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Initialize
+updateSlider(0.2)
+print("Ultimate Auto Farm GUI Loaded!")
+print("- GUI automatically visible")
+print("- KillAura (Optimized)")
+print("- Auto Rebirth") 
+print("- Speed Hack")
+print("- Godmode (Unequip shield + use with KillAura)")
+print("- World Teleport (Spawn, World 2, World 3, World 4)")
+print("- Auto Collect (dev toggle)")
+print("- Mobile Compatible")
