@@ -282,150 +282,89 @@ teleportCorner:Clone().Parent = world2Button
 teleportCorner:Clone().Parent = world3Button
 teleportCorner:Clone().Parent = world4Button
 
--- ===========================
--- Auto-Collect Implementation (DEV) — Robust/Functional Version
--- ===========================
-local collectScanInterval = 0.15   -- seconds between scans
-local collectRange = 12            -- max distance in studs to attempt a pickup
-local collectBatch = 6             -- how many prompted items to process per scan
+--====================================================
+-- 🧩 DEV TOOL: AUTO COLLECT
+--====================================================
+do
+	local player = game.Players.LocalPlayer
+	local tsFrame = player:WaitForChild("PlayerGui"):WaitForChild("TS").Main.Dev -- adjust if your dev frame path differs
 
--- Helper: find ProximityPrompt instances with ActionText "Pickup"
-local function getPromptedItems()
-    local results = {}
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return results end
-    local hrpPos = hrp.Position
+	--=== UI ===--
+	local collectLabel = Instance.new("TextLabel")
+	collectLabel.Name = "CollectLabel"
+	collectLabel.Parent = tsFrame
+	collectLabel.BackgroundTransparency = 1
+	collectLabel.Size = UDim2.new(0, 150, 0, 30)
+	collectLabel.Position = UDim2.new(0, 10, 0, 210) -- adjust position to fit your layout
+	collectLabel.Font = Enum.Font.SourceSansBold
+	collectLabel.Text = "Auto Collect:"
+	collectLabel.TextSize = 20
+	collectLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	collectLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-    for _, prompt in ipairs(workspace:GetDescendants()) do
-        if prompt:IsA("ProximityPrompt") and prompt.Enabled and (prompt.ActionText == "Pickup" or prompt.ActionText:lower():find("pick")) then
-            -- determine position
-            local parent = prompt.Parent
-            local pos
-            if parent:IsA("BasePart") then
-                pos = parent.Position
-            elseif parent:IsA("Model") and parent.PrimaryPart then
-                pos = parent.PrimaryPart.Position
-            end
+	local collectButton = Instance.new("TextButton")
+	collectButton.Name = "CollectButton"
+	collectButton.Parent = tsFrame
+	collectButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+	collectButton.Size = UDim2.new(0, 60, 0, 30)
+	collectButton.Position = UDim2.new(0, 170, 0, 210) -- beside label
+	collectButton.Font = Enum.Font.SourceSansBold
+	collectButton.TextSize = 20
+	collectButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	collectButton.Text = "OFF"
+	collectButton.AutoButtonColor = true
+	collectButton.BorderSizePixel = 0
+	collectButton.Active = true
+	collectButton.Visible = true
 
-            if pos and (pos - hrpPos).Magnitude <= math.min(prompt.MaxActivationDistance, collectRange) then
-                table.insert(results, {prompt = prompt, parent = parent, pos = pos, dist = (pos - hrpPos).Magnitude})
-            end
-        end
-    end
+	--=== LOGIC ===--
+	local autoCollectEnabled = false
+	local collectRange = 12
+	local scanInterval = 0.15
+	local runService = game:GetService("RunService")
 
-    table.sort(results, function(a,b) return a.dist < b.dist end)
-    return results
+	collectButton.MouseButton1Click:Connect(function()
+		autoCollectEnabled = not autoCollectEnabled
+		collectButton.Text = autoCollectEnabled and "ON" or "OFF"
+		collectButton.BackgroundColor3 = autoCollectEnabled and Color3.fromRGB(60, 220, 60) or Color3.fromRGB(220, 60, 60)
+	end)
+
+	local function getRoot()
+		local char = player.Character
+		return char and char:FindFirstChild("HumanoidRootPart")
+	end
+
+	runService.Heartbeat:Connect(function()
+		if not autoCollectEnabled then return end
+
+		local root = getRoot()
+		if not root then return end
+
+		for _, prompt in ipairs(workspace:GetDescendants()) do
+			if prompt:IsA("ProximityPrompt") and prompt.Enabled and prompt.ActionText == "Pickup" then
+				local parent = prompt.Parent
+				local pos = parent:IsA("BasePart") and parent.Position
+					or (parent:IsA("Model") and parent.PrimaryPart and parent.PrimaryPart.Position)
+				if pos and (pos - root.Position).Magnitude <= math.min(prompt.MaxActivationDistance, collectRange) then
+					pcall(function()
+						if typeof(fireproximityprompt) == "function" then
+							fireproximityprompt(prompt)
+						else
+							prompt:InputHoldBegin()
+							task.wait(0.03)
+							prompt:InputHoldEnd()
+						end
+					end)
+				end
+			end
+		end
+		task.wait(scanInterval)
+	end)
 end
+--====================================================
+-- END DEV TOOL
+--====================================================
 
--- Robust trigger function: tries multiple safe activation methods
-local function triggerPrompt(entry)
-    if not entry or not entry.prompt then return false end
-    local prompt = entry.prompt
-
-    -- 1) Preferred: fireproximityprompt (works in Studio / many runtimes)
-    local ok, err = pcall(function()
-        if typeof(fireproximityprompt) == "function" then
-            fireproximityprompt(prompt)
-            return true
-        end
-    end)
-    if ok and typeof(fireproximityprompt) == "function" then
-        return true
-    end
-
-    -- 2) Try :InputHoldBegin / :InputHoldEnd (some prompts expose these)
-    ok, err = pcall(function()
-        if prompt.InputHoldBegin and prompt.InputHoldEnd then
-            prompt:InputHoldBegin()
-            task.wait(0.03)
-            prompt:InputHoldEnd()
-            return true
-        end
-    end)
-    if ok and prompt.InputHoldBegin and prompt.InputHoldEnd then
-        return true
-    end
-
-    -- 3) Try :Trigger (older or alternate APIs)
-    ok, err = pcall(function()
-        if prompt.Trigger then
-            -- some devs expose Trigger as a function on the instance
-            prompt:Trigger()
-            return true
-        end
-    end)
-    if ok and prompt.Trigger then
-        return true
-    end
-
-    -- 4) Fallback: physically move the player briefly to touch the object (dev-only)
-    local parent = entry.parent
-    if parent then
-        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            pcall(function()
-                local orig = hrp.CFrame
-                local targetPos
-                if parent:IsA("BasePart") then
-                    targetPos = parent.Position
-                elseif parent:IsA("Model") and parent.PrimaryPart then
-                    targetPos = parent.PrimaryPart.Position
-                end
-                if targetPos then
-                    hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
-                    task.wait(0.05)
-                    hrp.CFrame = orig
-                end
-            end)
-            return true
-        end
-    end
-
-    return false
-end
-
--- Runner
-local function startCollectRunner()
-    return RunService.Heartbeat:Connect(function(dt)
-        if not autoCollectEnabled then return end
-
-        -- Throttle to interval to avoid running heavy logic every Heartbeat
-        -- we will accumulate dt
-        startCollectRunner._acc = (startCollectRunner._acc or 0) + dt
-        if startCollectRunner._acc < collectScanInterval then return end
-        startCollectRunner._acc = 0
-
-        local entries = getPromptedItems()
-        if #entries == 0 then return end
-
-        for i = 1, math.min(#entries, collectBatch) do
-            local entry = entries[i]
-            pcall(function() triggerPrompt(entry) end)
-        end
-    end)
-end
-
--- Toggle for collect (GUI already created above; keeps same visuals)
-local function toggleAutoCollect()
-    autoCollectEnabled = not autoCollectEnabled
-    if autoCollectEnabled then
-        collectButton.Text = "ON"
-        collectButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
-        if not collectConnection then collectConnection = startCollectRunner() end
-        print("Auto Collect enabled (dev)")
-    else
-        collectButton.Text = "OFF"
-        collectButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-        if collectConnection then collectConnection:Disconnect() collectConnection = nil end
-        print("Auto Collect disabled (dev)")
-    end
-end
-
-collectButton.MouseButton1Click:Connect(toggleAutoCollect)
-
--- ===========================
--- End Auto-Collect Implementation (DEV)
--- ===========================
 
 
 -- Godmode Section
